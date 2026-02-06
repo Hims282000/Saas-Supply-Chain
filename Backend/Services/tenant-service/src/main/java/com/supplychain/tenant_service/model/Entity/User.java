@@ -1,82 +1,90 @@
 package com.supplychain.tenant_service.model.Entity;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-
 import com.supplychain.tenant_service.model.eNums.UserRole;
-
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
-@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "email"}))
+@Table(name = "users",
+       uniqueConstraints = @UniqueConstraint(
+           columnNames = {"tenant_id", "email"}
+       ))
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class User {
-
+public class User implements UserDetails {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(name = "tenant_id" , nullable = false)
-    private UUID tenantId;
-
+    
     @Column(nullable = false)
     private String email;
-
-    @Column(name = "password_hash" , nullable = false)
-    private String passwordHash;
-
-    @Column(name = "full_Name")
-    private String fullName;
-
+    
     @Column(nullable = false)
+    private String password;
+    
+    @Column(nullable = false)
+    private String fullName;
+    
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Builder.Default
-    private UserRole userRole = UserRole.VIEWER;
-
-    @Column(name = "isActive")
+    private UserRole role = UserRole.VIEWER;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+    
+    @Column(nullable = false)
     @Builder.Default
     private Boolean isActive = true;
-
-    @Column(name = "Last_Login_At")
-    private LocalDateTime lastloginAt;
-
-    @CreationTimestamp
-    @Column(name = "created_at" , nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at" , nullable = false)
-    private LocalDateTime updatedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", insertable = false , updatable = false)
-    private Tenant tenant;
-
-
-
-
     
+    private LocalDateTime lastLoginAt;
+    
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+    }
+    
+    @Override
+    public String getUsername() {
+        return email;
+    }
+    
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+    
+    @Override
+    public boolean isAccountNonLocked() {
+        return isActive;
+    }
+    
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+    
+    @Override
+    public boolean isEnabled() {
+        return isActive;
+    }
 }

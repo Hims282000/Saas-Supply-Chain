@@ -1,85 +1,71 @@
 package com.supplychain.tenant_service.model.Entity;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import com.fasterxml.jackson.databind.annotation.EnumNaming;
 import com.supplychain.tenant_service.model.eNums.SubscriptionStatus;
 import com.supplychain.tenant_service.model.eNums.SubscriptionTier;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
-@Table(name= "tenants")
+@Table(name = "tenants")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Tenant {
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
+    
     @Column(nullable = false)
     private String name;
-
-    @Column(unique = true, nullable = false , length = 100)
-    private String subdomain;
-
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "subscription_tier" , nullable = false)
-    @Builder.Default
-    private SubscriptionTier subscriptionTier;
-
-
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "subscription_Sattus", nullable = false)
-    @Builder.Default
-    private SubscriptionStatus subscriptionStatus;
-
-
-    @Column(name = "Sripe_customer__id" ,length = 100 )
-    private String stripeCustomerId;
-
-    @Column(name = "max_users" )
-    @Builder.Default
-    private Integer maxUsers=5;
-
-
-    @Column(name = "max_shipments_per_month" )
-    @Builder.Default
-    private Integer maxShipmentsPerMonth;
-
-    @Column(name = "max_ai_queries_per_day")
-    @Builder.Default
-    private Integer maxAiQueriesPerDay;
-
-    @CreationTimestamp
-    @Column(name = "created_At" , nullable = false, updatable = false)
-    private LocalDate createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at" , nullable = false)
-    private LocalDateTime updatedAt;
-
     
+    @Column(unique = true, nullable = false)
+    private String subdomain;
+    
+    @Column(unique = true)
+    private String stripeCustomerId;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private SubscriptionTier subscriptionTier = SubscriptionTier.FREE;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
+    
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private TenantConfig config;
+    
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TenantConfig {
+        private String timezone;
+        private String currency;
+        private Boolean emailNotifications;
+        private Boolean smsNotifications;
+        private Integer maxUsers;
+        private Integer maxShipmentsPerMonth;
+    }
 }

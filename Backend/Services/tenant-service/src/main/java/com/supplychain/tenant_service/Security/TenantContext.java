@@ -2,22 +2,18 @@ package com.supplychain.tenant_service.Security;
 
 import java.util.UUID;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 public class TenantContext {
-    private static final ThreadLocal<UUID> currentTenant= new ThreadLocal<>();
-    public static void setTenantId(UUID tenantId){
+    private static final ThreadLocal<UUID> currentTenant = new ThreadLocal<>();
+    
+    public static void setCurrentTenant(UUID tenantId) {
         currentTenant.set(tenantId);
     }
-    public static UUID getTenantId(){
+    
+    public static UUID getCurrentTenant() {
         return currentTenant.get();
     }
-
-    public static void clear(){
-        currentTenant.remove();
-
-    }
-
     
+    public static void clear() {
+        currentTenant.remove();
+    }
 }

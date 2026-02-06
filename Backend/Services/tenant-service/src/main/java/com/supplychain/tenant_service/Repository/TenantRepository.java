@@ -1,15 +1,15 @@
 package com.supplychain.tenant_service.Repository;
 
-import java.util.Optional;
-
+import com.supplychain.tenant_service.model.Entity.Tenant;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.supplychain.tenant_service.model.Entity.Tenant;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public class TenantRepository {
-    Optional<Tenant> findBySubDomain(String subdomain);
-
-    boolean existsBySubDomain(String subdomain);
-    
+public interface TenantRepository extends JpaRepository<Tenant, UUID> {
+    Optional<Tenant> findBySubdomain(String subdomain);
+    boolean existsBySubdomain(String subdomain);
+    boolean existsByName(String name);
 }

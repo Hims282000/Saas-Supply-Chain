@@ -1,0 +1,60 @@
+server:
+    port: 8082
+
+spring:
+    application:
+        name: Shipment-service
+
+    datasource:
+        url: jdbc:postgresql://localhost:5432/supplychain_db
+        username: Himanshu
+        password: postgres@123
+        driver-class-name: org.postgresql.Driver
+
+        hikari:
+            maximum-pool-size: 10
+            minimum-idle: 5
+    
+    jpa:
+        hibernate: 
+            ddl-auto : update
+        properties:
+            hibernate:
+                dialect:  org.hibernate.dialect.PostgreSQLDialect
+                format_sql: true
+        show-sql: false
+
+    kafka:
+        bootstrap-server: localhost:9092
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.Stringserializer
+            value-serializer: org.springframework.support.kafka.serializer.JsonSerializer
+            properties:
+                spring.json.type.mapping : ShipmentEvent.com.supplychain.Shipment_service.Model.ShipmentEvent
+        consumer: 
+            group-id: shipment-service-group
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer 
+
+        properties:
+            spring.json.trusted.packages: "*"
+            spring.json.type.mapping: shipmentEvent:com.supplychain.shipment.model.ShipmentEventMessage
+
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics
+        endpoint:
+            health:
+                show-details: always
+
+logging:
+    level:
+        com.supplychain.shipment: DEBUG
+        org.springframework.web: INFO
+        org.hibernate.SQL: WARN
+
+
+

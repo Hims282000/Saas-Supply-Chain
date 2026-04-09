@@ -7,9 +7,11 @@ import com.supplychain.tenant_service.service.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tenants")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Tenant Management", description = "Tenant management endpoints")
 @SecurityRequirement(name = "bearer-key")
 public class TenantController {
@@ -34,7 +37,8 @@ public class TenantController {
     
     @GetMapping("/subdomain/{subdomain}")
     @Operation(summary = "Get tenant by subdomain")
-    public ResponseEntity<TenantDTO> getTenantBySubdomain(@PathVariable String subdomain) {
+    public ResponseEntity<TenantDTO> getTenantBySubdomain(
+            @PathVariable @Pattern(regexp = "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", message = "Invalid subdomain format") String subdomain) {
         TenantDTO tenant = tenantService.getTenantBySubdomain(subdomain);
         return ResponseEntity.ok(tenant);
     }

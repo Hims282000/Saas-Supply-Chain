@@ -10,8 +10,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.supplychain.tenant_service.service.JwtService;
+import com.supplychain.tenant_service.model.Entity.User;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
-    private final JwtService jwtService;
+    private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
 
     @Override
@@ -34,40 +36,53 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         @NonNull HttpServletRequest httpServletRequest,
         @NonNull HttpServletResponse httpServletResponse,
         @NonNull FilterChain filterChain) throws ServletException, IOException {
-            final String authHeader= httpServletRequest.getHeader("AUTHORIZATION");
-            if (authHeader == null || !authHeader.startsWith("Bearer")) {
+            final String authHeader = httpServletRequest.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 filterChain.doFilter(httpServletRequest, httpServletResponse);
                 return;
-                
             }
 
-            try{
-                final String jwt= authHeader.substring(7);
-                final String userEmail= jwtService.extractUsername(jwt);
-                final String tenantId= jwtService.extractTenantId(jwt);
+            try {
+                final String jwt = authHeader.substring(7);
+                final String userEmail = jwtTokenProvider.getEmailFromToken(jwt);
 
-                if (userEmail!= null && SecurityContextHolder.getContext().getAuthentication()== null) {
-                    UserDetails userDetails= this.userDetailsService.loadUserByUsername(userEmail);
-                    
-                    if (jwtService.validateToken(jwt,(CustomerUserDetails) userDetails)) {
-                        TenantContext.setTenantId(tenantId);
-                        UsernamePasswordAuthenticationToken authenticationToken= new UsernamePasswordAuthenticationToken(userDetails, null,userDetails.getAuthorities());
-                        
+                if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+
+                    if (jwtTokenProvider.validateToken(jwt)) {
+                        // Use DB-verified tenant from User entity, not JWT claim
+                        User user = (User) userDetails;
+                        TenantContext.setCurrentTenant(user.getTenant().getId());
+
+                        UsernamePasswordAuthenticationToken authenticationToken =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                         authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(httpServletRequest));
                         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                        log.debug("Authenticated user ", userEmail, tenantId);
+                        log.debug("Authenticated user: {} for tenant: {}", userEmail, user.getTenant().getId());
                     }
-                    
                 }
-            } catch(Exception e){
+            } catch (ExpiredJwtException e) {
+                log.warn("JWT token expired: {}", e.getMessage());
+                httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpServletResponse.setContentType("application/json");
+                httpServletResponse.getWriter().write("{\"error\": \"Token expired\"}");
+                return;
+            } catch (JwtException e) {
+                log.warn("Invalid JWT token: {}", e.getMessage());
+                httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpServletResponse.setContentType("application/json");
+                httpServletResponse.getWriter().write("{\"error\": \"Invalid token\"}");
+                return;
+            } catch (Exception e) {
                 log.error("Cannot set user authentication: {}", e.getMessage());
             }
             filterChain.doFilter(httpServletRequest, httpServletResponse);
         }
 
     @Override
-        protected boolean shouldNotFilter(HttpServletRequest httpServletRequest){
-            String path= httpServletRequest.getServletPath();
-            return path.startsWith("/api/auth/signup") ||  path.startsWith("/api/auth/login") || path.startsWith("/actuator") || path.startsWith("/h2-console");
+    protected boolean shouldNotFilter(HttpServletRequest httpServletRequest) {
+        String path = httpServletRequest.getServletPath();
+        return path.startsWith("/api/auth/signup") || path.startsWith("/api/auth/login") ||
+               path.startsWith("/api/auth/register") || path.startsWith("/actuator/health");
     }
 }

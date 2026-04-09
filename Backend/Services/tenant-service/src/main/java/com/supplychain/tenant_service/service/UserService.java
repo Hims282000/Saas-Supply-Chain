@@ -100,8 +100,7 @@ public class UserService {
             throw new SecurityException("Cannot access users from another tenant");
         }
         
-        return userRepository.findAll().stream()
-                .filter(user -> user.getTenant().getId().equals(tenantId))
+        return userRepository.findByTenant_Id(tenantId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }

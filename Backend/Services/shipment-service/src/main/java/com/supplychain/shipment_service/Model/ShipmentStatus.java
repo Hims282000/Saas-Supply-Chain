@@ -18,9 +18,9 @@ public enum ShipmentStatus {
         this.description=description;
 
     }
-public String getDescription(){
-    return description;
-}
+    public String getDescription(){
+        return description;
+    }
 
     
 }
